@@ -1,0 +1,47 @@
+{
+  "collections": {
+    "carregamentos": {
+      "id": { "type": "string" },
+      "name": { "type": "string" },
+      "date": { "type": "string" },
+      "status": { "type": "string" },
+      "vehicleCapacity": { "type": "number", "optional": true }
+    },
+    "shipments": {
+      "id": { "type": "string" },
+      "shipmentNumber": { "type": "string" },
+      "clientName": { "type": "string" },
+      "carrierName": { "type": "string" },
+      "volumes": { "type": "number" },
+      "carregamentoId": { "type": "string" },
+      "status": { "type": "string" },
+      "palletId": { "type": "string", "optional": true }
+    },
+    "pallets": {
+      "id": { "type": "string" },
+      "carregamentoId": { "type": "string" },
+      "createdAt": { "type": "string" },
+      "shipments": { "type": "array" },
+      "loaded": { "type": "boolean" },
+      "loadedAt": { "type": "string", "optional": true },
+      "loadedVehicleId": { "type": "string", "optional": true }
+    },
+    "users": {
+      "id": { "type": "string" },
+      "fullName": { "type": "string" },
+      "username": { "type": "string" },
+      "password": { "type": "string" },
+      "role": { "type": "string" },
+      "status": { "type": "string" },
+      "createdAt": { "type": "string" }
+    },
+    "auditLogs": {
+      "id": { "type": "string" },
+      "action": { "type": "string" },
+      "timestamp": { "type": "string" },
+      "actorId": { "type": "string" },
+      "actorName": { "type": "string" },
+      "details": { "type": "string" }
+    }
+  }
+}

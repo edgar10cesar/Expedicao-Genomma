@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+/* Hide scrollbars for navbar slider */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+/* Print thermal label styles */
+@media print {
+  /* Hide all generic page content */
+  body * {
+    visibility: hidden;
+    background: none !important;
+  }
+  
+  /* Show only our exact label card layout */
+  #printable-pallet-sticker, #printable-pallet-sticker * {
+    visibility: visible;
+  }
+  
+  /* Position target sticker exactly in the print margin */
+  #printable-pallet-sticker {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100mm !important;
+    height: 80mm !important;
+    border: 2px solid #000000 !important;
+    padding: 12px !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    transform: none !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* Force standard margins and dimensions */
+  @page {
+    size: 100mm 80mm;
+    margin: 0;
+  }
+}
+

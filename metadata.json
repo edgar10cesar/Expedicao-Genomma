@@ -1,0 +1,6 @@
+{
+  "name": "Genomma Expedição",
+  "description": "Sistema intelingente de paletização, checkout de embarques e conferência de carregamento de caminhões com QR Code para a expedição da Genomma Lab.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
