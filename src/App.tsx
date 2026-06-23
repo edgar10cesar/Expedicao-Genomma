@@ -59,9 +59,14 @@ function isDeepEqual(obj1: any, obj2: any): boolean {
 
 async function syncToFirestore(collectionName: string, next: any[], prev: any[]) {
   try {
+    const safeNext = Array.isArray(next) ? next : [];
+    const safePrev = Array.isArray(prev) ? prev : [];
     const prevMap = new Map<string, any>();
-    for (const p of prev) {
-      prevMap.set(p.id, p);
+    
+    for (const p of safePrev) {
+      if (p && p.id) {
+        prevMap.set(p.id, p);
+      }
     }
 
     const nextIds = new Set<string>();
@@ -69,17 +74,19 @@ async function syncToFirestore(collectionName: string, next: any[], prev: any[])
     const idsToDelete: string[] = [];
 
     // 1. Identify added or modified items
-    for (const item of next) {
-      nextIds.add(item.id);
-      const prevItem = prevMap.get(item.id);
-      if (!prevItem || !isDeepEqual(prevItem, item)) {
-        itemsToWrite.push(item);
+    for (const item of safeNext) {
+      if (item && item.id) {
+        nextIds.add(item.id);
+        const prevItem = prevMap.get(item.id);
+        if (!prevItem || !isDeepEqual(prevItem, item)) {
+          itemsToWrite.push(item);
+        }
       }
     }
 
     // 2. Identify deleted items
-    for (const prevItem of prev) {
-      if (!nextIds.has(prevItem.id)) {
+    for (const prevItem of safePrev) {
+      if (prevItem && prevItem.id && !nextIds.has(prevItem.id)) {
         idsToDelete.push(prevItem.id);
       }
     }
@@ -149,6 +156,17 @@ export default function App() {
       return null;
     }
   });
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      (window as any).deferredPrompt = e;
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;

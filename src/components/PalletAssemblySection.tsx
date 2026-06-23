@@ -101,7 +101,7 @@ export default function PalletAssemblySection({
 
     // Lookup across the planning shipments database corresponding to either current load or overall
     const foundPlanned = shipments.find(
-      sh => sh.shipmentNumber === trimmedNum && sh.carregamentoId === selectedLoadId
+      sh => sh && String(sh.shipmentNumber).trim() === String(trimmedNum).trim() && sh.carregamentoId === selectedLoadId
     );
 
     if (foundPlanned) {
@@ -110,22 +110,24 @@ export default function PalletAssemblySection({
 
       // Sum volumes of this shipment already packed in finalized/existing pallets for this loading
       const alreadyPacked = pallets.reduce((sum, p) => {
-        const item = p.shipments.find(s => s.shipmentNumber === trimmedNum);
-        return sum + (item ? item.volumes : 0);
+        if (!p || !Array.isArray(p.shipments)) return sum;
+        const item = p.shipments.find(s => s && String(s.shipmentNumber).trim() === String(trimmedNum).trim());
+        return sum + (item ? Number(item.volumes) || 0 : 0);
       }, 0);
 
-      const remaining = Math.max(0, foundPlanned.volumes - alreadyPacked);
+      const plannedVolumes = Number(foundPlanned.volumes) || 0;
+      const remaining = Math.max(0, plannedVolumes - alreadyPacked);
       setVolumes(remaining);
 
       if (remaining === 0) {
         setInputFeedback({
           type: 'error',
-          text: `Aviso: Todos os ${foundPlanned.volumes} volumes planejados deste embarque já foram paletizados.`
+          text: `Aviso: Todos os ${plannedVolumes} volumes planejados deste embarque já foram paletizados.`
         });
       } else if (alreadyPacked > 0) {
         setInputFeedback({
           type: 'success',
-          text: `Embarques parciais localizados: ${alreadyPacked} de ${foundPlanned.volumes} volumes já paletizados. Restam auto-preenchidos ${remaining} volumes.`
+          text: `Embarques parciais localizados: ${alreadyPacked} de ${plannedVolumes} volumes já paletizados. Restam auto-preenchidos ${remaining} volumes.`
         });
       } else {
         setInputFeedback({
@@ -135,7 +137,7 @@ export default function PalletAssemblySection({
       }
     } else {
       // Look globally if it's on a different load
-      const globalPlanned = shipments.find(sh => sh.shipmentNumber === trimmedNum);
+      const globalPlanned = shipments.find(sh => sh && String(sh.shipmentNumber).trim() === String(trimmedNum).trim());
       if (globalPlanned) {
         const matchingLoad = carregamentos.find(c => c.id === globalPlanned.carregamentoId);
         setInputFeedback({
@@ -146,10 +148,12 @@ export default function PalletAssemblySection({
         setCarrierName(globalPlanned.carrierName);
 
         const alreadyPacked = pallets.reduce((sum, p) => {
-          const item = p.shipments.find(s => s.shipmentNumber === trimmedNum);
-          return sum + (item ? item.volumes : 0);
+          if (!p || !Array.isArray(p.shipments)) return sum;
+          const item = p.shipments.find(s => s && String(s.shipmentNumber).trim() === String(trimmedNum).trim());
+          return sum + (item ? Number(item.volumes) || 0 : 0);
         }, 0);
-        const remaining = Math.max(0, globalPlanned.volumes - alreadyPacked);
+        const plannedVolumes = Number(globalPlanned.volumes) || 0;
+        const remaining = Math.max(0, plannedVolumes - alreadyPacked);
         setVolumes(remaining);
       } else {
         setInputFeedback({
@@ -189,14 +193,14 @@ export default function PalletAssemblySection({
     }
 
     // Prevent adding the same shipment number twice inside the same pallet
-    const isAlreadyOnPallet = activePalletItems.some(item => item.shipmentNumber === shipmentNumber.trim());
+    const isAlreadyOnPallet = activePalletItems.some(item => String(item.shipmentNumber).trim() === String(shipmentNumber).trim());
     if (isAlreadyOnPallet) {
       alert('Este embarque já foi adicionado a este palete.');
       return;
     }
 
     // BLOCK cross-loading: Check if this shipment belongs to another carregamento of different ID
-    const globalShipment = shipments.find(sh => sh.shipmentNumber === shipmentNumber.trim());
+    const globalShipment = shipments.find(sh => sh && String(sh.shipmentNumber).trim() === String(shipmentNumber).trim());
     if (globalShipment && globalShipment.carregamentoId !== selectedLoadId) {
       const matchingLoad = carregamentos.find(c => c.id === globalShipment.carregamentoId);
       alert(`Bloqueado: Este embarque pertence ao processo "${matchingLoad?.name || 'outro carregamento'}" e não pode ser misturado neste palete.`);
@@ -205,7 +209,7 @@ export default function PalletAssemblySection({
 
     // Deduce if this relates to a valid pre-planned shipment ID
     const matchedShipment = shipments.find(
-      sh => sh.shipmentNumber === shipmentNumber.trim() && sh.carregamentoId === selectedLoadId
+      sh => sh && String(sh.shipmentNumber).trim() === String(shipmentNumber).trim() && sh.carregamentoId === selectedLoadId
     );
 
     // Append to list
@@ -277,20 +281,23 @@ export default function PalletAssemblySection({
     };
 
     // Update statuses of shipments involved in the database based on completeness
-    const shipmentNumbersOnPallet = activePalletItems.map(item => item.shipmentNumber);
+    const shipmentNumbersOnPallet = activePalletItems.map(item => String(item.shipmentNumber).trim());
     setShipments(prev =>
       prev.map(sh => {
-        if (sh.carregamentoId === selectedLoadId && shipmentNumbersOnPallet.includes(sh.shipmentNumber)) {
-          const currentItem = activePalletItems.find(item => item.shipmentNumber === sh.shipmentNumber);
-          const currentVolumes = currentItem ? currentItem.volumes : 0;
+        if (!sh) return sh;
+        const shNum = String(sh.shipmentNumber).trim();
+        if (sh.carregamentoId === selectedLoadId && shipmentNumbersOnPallet.includes(shNum)) {
+          const currentItem = activePalletItems.find(item => String(item.shipmentNumber).trim() === shNum);
+          const currentVolumes = currentItem ? Number(currentItem.volumes) || 0 : 0;
 
           // Sum volumes of this shipment already packed in prior pallets
           const alreadyPacked = pallets.reduce((sum, p) => {
-            const match = p.shipments.find(item => item.shipmentNumber === sh.shipmentNumber);
-            return sum + (match ? match.volumes : 0);
+            if (!p || !Array.isArray(p.shipments)) return sum;
+            const match = p.shipments.find(item => item && String(item.shipmentNumber).trim() === shNum);
+            return sum + (match ? Number(match.volumes) || 0 : 0);
           }, 0);
 
-          const totalPlanned = sh.volumes;
+          const totalPlanned = Number(sh.volumes) || 0;
           const totalPacked = alreadyPacked + currentVolumes;
 
           if (totalPacked >= totalPlanned) {

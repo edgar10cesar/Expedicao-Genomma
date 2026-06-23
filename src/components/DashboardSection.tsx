@@ -20,19 +20,20 @@ interface DashboardSectionProps {
 }
 
 // Custom date parser
-function parseBRDate(dateStr: string): Date {
-  if (!dateStr) return new Date();
-  if (dateStr.includes('-')) {
-    return new Date(dateStr);
+function parseBRDate(dateStr: any): Date {
+  const str = String(dateStr || '');
+  if (!str) return new Date();
+  if (str.includes('-')) {
+    return new Date(str);
   }
-  const parts = dateStr.split('/');
+  const parts = str.split('/');
   if (parts.length === 3) {
     const day = parseInt(parts[0], 10);
     const month = parseInt(parts[1], 10) - 1; // 0-based
     const year = parseInt(parts[2], 10);
     return new Date(year, month, day);
   }
-  return new Date(dateStr);
+  return new Date(str);
 }
 
 const getCreationTime = (c: Carregamento) => {
@@ -83,6 +84,7 @@ export default function DashboardSection({
   const filteredData = useMemo(() => {
     // 1. Get filtered Carregamentos
     const filteredLoads = carregamentos.filter(c => {
+      if (!c) return false;
       // Date Filter
       const loadDate = parseBRDate(c.date);
       if (startDateStr) {
@@ -99,24 +101,26 @@ export default function DashboardSection({
       // Load name list search
       if (loadNumberFilter) {
         const query = loadNumberFilter.toLowerCase();
-        const matchesName = c.name.toLowerCase().includes(query) || c.id.toLowerCase().includes(query);
+        const cName = String(c.name || '').toLowerCase();
+        const cId = String(c.id || '').toLowerCase();
+        const matchesName = cName.includes(query) || cId.includes(query);
         if (!matchesName) return false;
       }
 
       // Check if this load contains any shipment matching carrier / client filters
-      const loadShipments = shipments.filter(s => s.carregamentoId === c.id);
+      const loadShipments = shipments.filter(s => s && s.carregamentoId === c.id);
       if (loadShipments.length === 0 && (carrierFilter !== 'all' || clientFilter)) {
         return false;
       }
 
       if (carrierFilter !== 'all') {
-        const hasCarrier = loadShipments.some(s => s.carrierName.toLowerCase() === carrierFilter.toLowerCase());
+        const hasCarrier = loadShipments.some(s => String(s.carrierName || '').toLowerCase() === carrierFilter.toLowerCase());
         if (!hasCarrier) return false;
       }
 
       if (clientFilter) {
         const clientQuery = clientFilter.toLowerCase();
-        const hasClient = loadShipments.some(s => s.clientName.toLowerCase().includes(clientQuery));
+        const hasClient = loadShipments.some(s => String(s.clientName || '').toLowerCase().includes(clientQuery));
         if (!hasClient) return false;
       }
 
@@ -127,14 +131,15 @@ export default function DashboardSection({
 
     // 2. Filter Shipments
     const filteredShipments = shipments.filter(s => {
+      if (!s) return false;
       if (!activeLoadIds.has(s.carregamentoId)) return false;
       
       if (carrierFilter !== 'all') {
-        if (s.carrierName.toLowerCase() !== carrierFilter.toLowerCase()) return false;
+        if (String(s.carrierName || '').toLowerCase() !== carrierFilter.toLowerCase()) return false;
       }
 
       if (clientFilter) {
-        if (!s.clientName.toLowerCase().includes(clientFilter.toLowerCase())) return false;
+        if (!String(s.clientName || '').toLowerCase().includes(clientFilter.toLowerCase())) return false;
       }
 
       return true;
@@ -142,13 +147,15 @@ export default function DashboardSection({
 
     // 3. Filter Pallets
     const filteredPallets = pallets.filter(p => {
+      if (!p) return false;
       if (!activeLoadIds.has(p.carregamentoId)) return false;
 
       // Ensure pallet contains at least one shipment matching filters if any
       if (carrierFilter !== 'all' || clientFilter) {
-        const hasMatch = p.shipments.some(ps => {
-          const matchCarrier = carrierFilter === 'all' || ps.carrierName.toLowerCase() === carrierFilter.toLowerCase();
-          const matchClient = !clientFilter || ps.clientName.toLowerCase().includes(clientFilter.toLowerCase());
+        const hasMatch = Array.isArray(p.shipments) && p.shipments.some(ps => {
+          if (!ps) return false;
+          const matchCarrier = carrierFilter === 'all' || String(ps.carrierName || '').toLowerCase() === carrierFilter.toLowerCase();
+          const matchClient = !clientFilter || String(ps.clientName || '').toLowerCase().includes(clientFilter.toLowerCase());
           return matchCarrier && matchClient;
         });
         if (!hasMatch) return false;

@@ -40,11 +40,11 @@ export function parseSpreadsheetText(text: string): {
       cols = [trialLine];
     }
 
-    cols = cols.map(c => c.trim().toLowerCase());
+    cols = cols.map(c => String(c || '').trim().toLowerCase());
 
     // Look for indicative headers
     const hasIndicative = cols.some(c => {
-      const norm = c
+      const norm = String(c || '')
         .toLowerCase()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
@@ -76,7 +76,7 @@ export function parseSpreadsheetText(text: string): {
 
   if (headerIndex !== -1) {
     headers.forEach((h, colIdx) => {
-      const norm = h
+      const norm = String(h || '')
         .toLowerCase()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
@@ -129,7 +129,7 @@ export function parseSpreadsheetText(text: string): {
       cols = [rowText];
     }
 
-    cols = cols.map(c => c.trim());
+    cols = cols.map(c => String(c || '').trim());
 
     // We must have at least a shipment number to be a valid row
     let shipmentNumber = '';
@@ -142,7 +142,7 @@ export function parseSpreadsheetText(text: string): {
       if (idxClient !== -1 && cols[idxClient]) clientName = cols[idxClient];
       if (idxCarrier !== -1 && cols[idxCarrier]) carrierName = cols[idxCarrier];
       if (idxVolumes !== -1 && cols[idxVolumes]) {
-        const rawClean = cols[idxVolumes].trim().split(',')[0].split('.')[0].replace(/\s/g, '');
+        const rawClean = String(cols[idxVolumes]).trim().split(',')[0].split('.')[0].replace(/\s/g, '');
         const parsedV = parseInt(rawClean, 10);
         if (!isNaN(parsedV)) volumes = parsedV;
       }
@@ -152,14 +152,14 @@ export function parseSpreadsheetText(text: string): {
       if (cols[1]) clientName = cols[1];
       if (cols[2]) carrierName = cols[2];
       if (cols[3]) {
-        const rawClean = cols[3].trim().split(',')[0].split('.')[0].replace(/\s/g, '');
+        const rawClean = String(cols[3]).trim().split(',')[0].split('.')[0].replace(/\s/g, '');
         const parsedV = parseInt(rawClean, 10);
         if (!isNaN(parsedV)) volumes = parsedV;
       }
     }
 
     // Clean up shipmentNumber (sometimes contains quotes or spaces)
-    shipmentNumber = shipmentNumber.replace(/['"]/g, '').trim();
+    shipmentNumber = String(shipmentNumber || '').replace(/['"]/g, '').trim();
 
     if (shipmentNumber) {
       result.push({
@@ -181,17 +181,19 @@ export function parseSpreadsheetText(text: string): {
  * function to process it identically.
  */
 export function convert2DArrayToText(data: any[][]): string {
-  if (!data || data.length === 0) return '';
+  if (!data || !Array.isArray(data) || data.length === 0) return '';
   return data
-    .map(row => 
-      row
+    .map(row => {
+      if (!row || !Array.isArray(row)) return '';
+      return row
         .map(cell => {
           if (cell === null || cell === undefined) return '';
           // Remove potential nested line breaks inside strings to prevent row splitting
           return String(cell).replace(/\r?\n/g, ' ');
         })
-        .join('\t')
-    )
+        .join('\t');
+    })
+    .filter(line => line !== '')
     .join('\n');
 }
 

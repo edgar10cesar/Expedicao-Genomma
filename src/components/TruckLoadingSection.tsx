@@ -44,6 +44,11 @@ export default function TruckLoadingSection({
 
   // Modal to celebrate completed load
   const [showConcludedModal, setShowConcludedModal] = useState(false);
+  const [concludedLoadInfo, setConcludedLoadInfo] = useState<{
+    name: string;
+    palletsCount: number;
+    totalVolumes: number;
+  } | null>(null);
 
   // Tab view for mobile screens to optimize checksheets scanning space
   const [mobileTab, setMobileTab] = useState<'all' | 'scanned' | 'pending'>('all');
@@ -273,12 +278,13 @@ export default function TruckLoadingSection({
       const validShipmentNumbers: string[] = [];
 
       scannedShipments.forEach(item => {
+        const itemNum = String(item.n || '').trim();
         // Look up this individual shipment number inside of our selected truck planning
-        const matchedPlanning = activeVehiclePlanning.find(sh => sh.shipmentNumber === item.n);
+        const matchedPlanning = activeVehiclePlanning.find(sh => sh && String(sh.shipmentNumber).trim() === itemNum);
 
         if (!matchedPlanning) {
           // It's a divergence: Either it belongs to another load, or doesn't exist at all!
-          const otherLoadMatch = shipments.find(sh => sh.shipmentNumber === item.n);
+          const otherLoadMatch = shipments.find(sh => sh && String(sh.shipmentNumber).trim() === itemNum);
           if (otherLoadMatch) {
             const alternateVehicle = carregamentos.find(v => v.id === otherLoadMatch.carregamentoId);
             problems.push(
@@ -325,11 +331,14 @@ export default function TruckLoadingSection({
         // B) Update physical Shipment status values to 'Carregado' only when all pallets of this shipment are loaded
         setShipments(prev =>
           prev.map(sh => {
-            if (validShipmentNumbers.includes(sh.shipmentNumber) && sh.carregamentoId === activeVehicleId) {
+            if (!sh) return sh;
+            const shNum = String(sh.shipmentNumber).trim();
+            const isValid = validShipmentNumbers.some(num => String(num).trim() === shNum);
+            if (isValid && sh.carregamentoId === activeVehicleId) {
               const updatedPallets = pallets.map(p => p.id === palletId ? { ...p, loaded: true } : p);
               const palletsWithThisShipment = updatedPallets.filter(p => 
-                p.carregamentoId === activeVehicleId && 
-                p.shipments.some(item => item.shipmentNumber === sh.shipmentNumber)
+                p && p.carregamentoId === activeVehicleId && 
+                Array.isArray(p.shipments) && p.shipments.some(item => item && String(item.shipmentNumber).trim() === shNum)
               );
               const allPalletsLoaded = palletsWithThisShipment.length > 0 && palletsWithThisShipment.every(p => p.loaded);
               
@@ -353,10 +362,22 @@ export default function TruckLoadingSection({
         appendLog(palletId, 'success', `Carregamento autorizado no veículo. ${scannedShipments.length} embarques integrados.`);
 
         // Check if this was the last pallet of the load to be loaded
-        const vehiclePallets = pallets.filter(p => p.carregamentoId === activeVehicleId);
+        const vehiclePallets = pallets.filter(p => p && p.carregamentoId === activeVehicleId);
         const otherPallets = vehiclePallets.filter(p => p.id !== palletId);
         const allOthersLoaded = otherPallets.length === 0 || otherPallets.every(p => p.loaded);
         if (allOthersLoaded && vehiclePallets.length > 0) {
+          const loadName = activeVehicle?.name || 'Desconhecido';
+          const totalPallets = vehiclePallets.length;
+          const totalVolumes = vehiclePallets.reduce((acc, curr) => {
+            if (!curr || !Array.isArray(curr.shipments)) return acc;
+            return acc + curr.shipments.reduce((sum, item) => sum + (Number(item.volumes) || 0), 0);
+          }, 0);
+
+          setConcludedLoadInfo({
+            name: loadName,
+            palletsCount: totalPallets,
+            totalVolumes: totalVolumes
+          });
           setShowConcludedModal(true);
           if (setCarregamentos) {
             setCarregamentos(prev =>
@@ -1050,16 +1071,26 @@ export default function TruckLoadingSection({
               <div className="bg-slate-50 border border-slate-150 rounded-xl p-4 text-left space-y-2.5 font-sans">
                 <div className="flex justify-between items-center text-xs text-slate-600 border-b border-slate-100 pb-1.5">
                   <span className="font-semibold text-slate-400 font-mono uppercase text-[9px] tracking-wider">Veículo Carregado:</span>
-                  <strong className="text-slate-800 font-bold text-[11px] truncate max-w-[180px]">{activeVehicle?.name || 'Desconhecido'}</strong>
+                  <strong className="text-slate-800 font-bold text-[11px] truncate max-w-[180px]">
+                    {concludedLoadInfo ? concludedLoadInfo.name : (activeVehicle?.name || 'Desconhecido')}
+                  </strong>
                 </div>
                 <div className="flex justify-between items-center text-xs text-slate-600 border-b border-slate-100 pb-1.5">
                   <span className="font-semibold text-slate-400 font-mono uppercase text-[9px] tracking-wider">Paletes Embarcados:</span>
-                  <strong className="text-emerald-700 font-black font-mono">{vehiclePallets.length} de {vehiclePallets.length}</strong>
+                  <strong className="text-emerald-700 font-black font-mono">
+                    {concludedLoadInfo 
+                      ? `${concludedLoadInfo.palletsCount} de ${concludedLoadInfo.palletsCount}` 
+                      : `${vehiclePallets.length} de ${vehiclePallets.length}`
+                    }
+                  </strong>
                 </div>
                 <div className="flex justify-between items-center text-xs text-slate-600">
                   <span className="font-semibold text-slate-400 font-mono uppercase text-[9px] tracking-wider">Volumes Totais:</span>
                   <strong className="text-slate-900 font-bold font-mono">
-                    {vehiclePallets.reduce((acc, curr) => acc + curr.shipments.reduce((sum, item) => sum + item.volumes, 0), 0)} Volumes
+                    {concludedLoadInfo 
+                      ? `${concludedLoadInfo.totalVolumes} Volumes` 
+                      : `${vehiclePallets.reduce((acc, curr) => acc + (curr && Array.isArray(curr.shipments) ? curr.shipments.reduce((sum, item) => sum + (Number(item.volumes) || 0), 0) : 0), 0)} Volumes`
+                    }
                   </strong>
                 </div>
               </div>
@@ -1067,7 +1098,10 @@ export default function TruckLoadingSection({
               <div className="pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowConcludedModal(false)}
+                  onClick={() => {
+                    setShowConcludedModal(false);
+                    setConcludedLoadInfo(null);
+                  }}
                   className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs py-3 rounded-xl transition-all shadow-md shadow-emerald-500/10 active:scale-98 cursor-pointer"
                 >
                   OK - Concluído

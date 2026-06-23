@@ -82,10 +82,19 @@ export default function PlanningSection({
     if (isExcel) {
       reader.onload = (e) => {
         try {
-          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          if (!e.target?.result) {
+            throw new Error('Não foi possível ler o conteúdo do arquivo.');
+          }
+          const data = new Uint8Array(e.target.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: 'array' });
-          const firstSheetName = workbook.SheetNames[0];
+          const firstSheetName = workbook.SheetNames?.[0];
+          if (!firstSheetName) {
+            throw new Error('A planilha está vazia ou não possui abas.');
+          }
           const worksheet = workbook.Sheets[firstSheetName];
+          if (!worksheet) {
+            throw new Error('Não foi possível carregar a aba da planilha.');
+          }
           const jsonData = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1 });
           const textRepresentation = convert2DArrayToText(jsonData);
           setSpreadsheetText(textRepresentation);
@@ -237,15 +246,18 @@ Express São Miguel\t30890125\tFarmácia Pague Menos - CD Campinas\tPD-9905\tSP\
       setCarregamentos(prev => [newLoad, ...prev]);
 
       // Convert parsed elements to actual database shipments as a new process
-      const newShipments: Shipment[] = parsed.map((item, index) => ({
-        id: `ship_${Date.now()}_${index}`,
-        shipmentNumber: item.shipmentNumber,
-        clientName: item.clientName,
-        carrierName: item.carrierName,
-        volumes: item.volumes,
-        carregamentoId: newId,
-        status: 'Pendente'
-      }));
+      const newShipments: Shipment[] = parsed.map((item, index) => {
+        const uniqueSalt = Math.random().toString(36).substring(2, 9);
+        return {
+          id: `ship_${Date.now()}_${uniqueSalt}_${index}`,
+          shipmentNumber: String(item.shipmentNumber || ''),
+          clientName: String(item.clientName || 'Cliente Geral'),
+          carrierName: String(item.carrierName || 'Transportadora Geral'),
+          volumes: Number(item.volumes) || 1,
+          carregamentoId: newId,
+          status: 'Pendente'
+        };
+      });
 
       // Set shipments (this will sync to firestore)
       setShipments(prev => [...prev, ...newShipments]);

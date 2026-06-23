@@ -1,0 +1,24 @@
+{
+  "name": "Expedição Genomma",
+  "short_name": "Expedição",
+  "description": "Sistema de Controle de Expedição, Paletização e Carregamento Genomma",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192' fill='none' stroke='%232563eb' stroke-width='10' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='192' height='192' rx='40' fill='%23ffffff'/%3E%3Cpath d='M 20 50 L 110 40 L 110 140 L 20 135 Z' fill='%232563eb' fill-opacity='0.15' stroke='%232563eb' stroke-width='8'/%3E%3Cpath d='M 110 60 L 160 65 L 175 90 L 175 140 L 110 140 Z' fill='%232563eb' fill-opacity='0.1' stroke='%232563eb' stroke-width='8'/%3E%3Ccircle cx='55' cy='155' r='18' fill='%231e293b' stroke='%23ffffff' stroke-width='4'/%3E%3Ccircle cx='95' cy='155' r='18' fill='%231e293b' stroke='%23ffffff' stroke-width='4'/%3E%3Ccircle cx='145' cy='155' r='18' fill='%231e293b' stroke='%23ffffff' stroke-width='4'/%3E%3Cpath d='M20 170 C 80 165, 120 165, 172 165' stroke='%2394a3b8' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='none' stroke='%232563eb' stroke-width='25' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='512' height='512' rx='100' fill='%23ffffff'/%3E%3Cpath d='M 50 130 L 290 100 L 290 370 L 50 360 Z' fill='%232563eb' fill-opacity='0.15' stroke='%232563eb' stroke-width='20'/%3E%3Cpath d='M 290 160 L 420 175 L 460 240 L 460 370 L 290 370 Z' fill='%232563eb' fill-opacity='0.1' stroke='%232563eb' stroke-width='20'/%3E%3Ccircle cx='140' cy='410' r='45' fill='%231e293b' stroke='%23ffffff' stroke-width='10'/%3E%3Ccircle cx='250' cy='410' r='45' fill='%231e293b' stroke='%23ffffff' stroke-width='10'/%3E%3Ccircle cx='380' cy='410' r='45' fill='%231e293b' stroke='%23ffffff' stroke-width='10'/%3E%3Cpath d='M50 450 C 200 440, 300 440, 460 440' stroke='%2394a3b8' stroke-width='15' stroke-linecap='round'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

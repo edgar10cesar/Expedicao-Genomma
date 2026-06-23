@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { Truck, Boxes, FileSpreadsheet, LayoutDashboard, Trash2, Shield, LogOut, User as UserIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Truck, Boxes, FileSpreadsheet, LayoutDashboard, Trash2, Shield, LogOut, User as UserIcon, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { User, UserRole } from '../types';
+import PWAInstallModal from './PWAInstallModal';
 
 interface HeaderProps {
   activeTab: string;
@@ -19,6 +20,7 @@ interface HeaderProps {
 export default function Header({ activeTab, setActiveTab, stats, onClearAllData, currentUser, onLogout }: HeaderProps) {
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [isPWAInstallOpen, setIsPWAInstallOpen] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -122,6 +124,17 @@ export default function Header({ activeTab, setActiveTab, stats, onClearAllData,
                   <span>{confirmClear ? "Confirmar Limpar?" : "Limpar Dados"}</span>
                 </button>
               )}
+
+              {/* Baixar / Instalar App Button */}
+              <button
+                type="button"
+                onClick={() => setIsPWAInstallOpen(true)}
+                className="text-xs font-bold px-3.5 py-2.5 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer text-blue-600 border border-blue-200 hover:bg-blue-600 hover:text-white bg-blue-50/50"
+                title="Instalar este sistema como aplicativo no computador ou celular"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Baixar App</span>
+              </button>
 
               {/* Secure Log Out button */}
               <button
@@ -279,6 +292,7 @@ export default function Header({ activeTab, setActiveTab, stats, onClearAllData,
           </div>
         )}
       </div>
+      <PWAInstallModal isOpen={isPWAInstallOpen} onClose={() => setIsPWAInstallOpen(false)} />
     </header>
   );
 }
