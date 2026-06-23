@@ -85,7 +85,7 @@ export function parseSpreadsheetText(text: string): {
       const isCarrier = norm.includes('transportadora') || norm.includes('transp') || norm.includes('carrier') || norm.includes('motorista');
       const isClient = norm.includes('cliente') || norm.includes('client') || norm.includes('destinat') || norm.includes('nome') || norm.includes('razao');
       const isVolume = (norm.includes('volume') || norm.includes('vol') || norm.includes('qtd') || norm.includes('quant') || norm.includes('pecas') || norm.includes('unid')) 
-         && !norm.includes('valor') && !norm.includes('peso') && !norm.includes('preco');
+         && !norm.includes('valor') && !norm.includes('peso') && !norm.includes('preco') && !norm.includes('palet') && !norm.includes('pallet') && !norm.includes('plt');
       const isShipment = (norm.includes('embarque') || norm.includes('shipment') || norm.includes('cod') || norm.includes('nº') || norm.includes('nro') || norm === 'emb')
          && !norm.includes('valor') && !norm.includes('peso') && !norm.includes('volume') && !norm.includes('ped') && !norm.includes('preco');
 
@@ -96,7 +96,15 @@ export function parseSpreadsheetText(text: string): {
       } else if (isCarrier) {
         idxCarrier = colIdx;
       } else if (isVolume) {
-        idxVolumes = colIdx;
+        const existingHeader = idxVolumes !== -1 ? headers[idxVolumes]
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .trim() : '';
+        const existingIsExact = existingHeader === 'volume' || existingHeader === 'volumes';
+        if (!existingIsExact) {
+          idxVolumes = colIdx;
+        }
       }
     });
   }
@@ -134,7 +142,8 @@ export function parseSpreadsheetText(text: string): {
       if (idxClient !== -1 && cols[idxClient]) clientName = cols[idxClient];
       if (idxCarrier !== -1 && cols[idxCarrier]) carrierName = cols[idxCarrier];
       if (idxVolumes !== -1 && cols[idxVolumes]) {
-        const parsedV = parseInt(cols[idxVolumes], 10);
+        const rawClean = cols[idxVolumes].trim().split(',')[0].split('.')[0].replace(/\s/g, '');
+        const parsedV = parseInt(rawClean, 10);
         if (!isNaN(parsedV)) volumes = parsedV;
       }
     } else {
@@ -143,7 +152,8 @@ export function parseSpreadsheetText(text: string): {
       if (cols[1]) clientName = cols[1];
       if (cols[2]) carrierName = cols[2];
       if (cols[3]) {
-        const parsedV = parseInt(cols[3], 10);
+        const rawClean = cols[3].trim().split(',')[0].split('.')[0].replace(/\s/g, '');
+        const parsedV = parseInt(rawClean, 10);
         if (!isNaN(parsedV)) volumes = parsedV;
       }
     }

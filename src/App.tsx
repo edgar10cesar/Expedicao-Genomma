@@ -35,29 +35,80 @@ function sanitizeObject(obj: any): any {
   return obj;
 }
 
+function isDeepEqual(obj1: any, obj2: any): boolean {
+  if (obj1 === obj2) return true;
+  if (typeof obj1 !== 'object' || obj1 === null || typeof obj2 !== 'object' || obj2 === null) return false;
+  
+  const keys1 = Object.keys(obj1);
+  const keys2 = Object.keys(obj2);
+  
+  if (keys1.length !== keys2.length) return false;
+  
+  for (const key of keys1) {
+    const val1 = obj1[key];
+    const val2 = obj2[key];
+    
+    if (typeof val1 === 'object' && val1 !== null && typeof val2 === 'object' && val2 !== null) {
+      if (JSON.stringify(val1) !== JSON.stringify(val2)) return false;
+    } else if (val1 !== val2) {
+      return false;
+    }
+  }
+  return true;
+}
+
 async function syncToFirestore(collectionName: string, next: any[], prev: any[]) {
   try {
-    const batch = writeBatch(db);
-    let hasChanges = false;
+    const prevMap = new Map<string, any>();
+    for (const p of prev) {
+      prevMap.set(p.id, p);
+    }
 
-    // 1. Add or set modified items
+    const nextIds = new Set<string>();
+    const itemsToWrite: any[] = [];
+    const idsToDelete: string[] = [];
+
+    // 1. Identify added or modified items
     for (const item of next) {
-      const prevItem = prev.find(p => p.id === item.id);
-      if (!prevItem || JSON.stringify(prevItem) !== JSON.stringify(item)) {
-        batch.set(doc(db, collectionName, item.id), sanitizeObject(item));
-        hasChanges = true;
+      nextIds.add(item.id);
+      const prevItem = prevMap.get(item.id);
+      if (!prevItem || !isDeepEqual(prevItem, item)) {
+        itemsToWrite.push(item);
       }
     }
 
-    // 2. Remove deleted items
+    // 2. Identify deleted items
     for (const prevItem of prev) {
-      if (!next.some(n => n.id === prevItem.id)) {
-        batch.delete(doc(db, collectionName, prevItem.id));
-        hasChanges = true;
+      if (!nextIds.has(prevItem.id)) {
+        idsToDelete.push(prevItem.id);
       }
     }
 
-    if (hasChanges) {
+    if (itemsToWrite.length === 0 && idsToDelete.length === 0) {
+      return;
+    }
+
+    // Combine delete and write operations into chunks of 400 (safe limit is 500)
+    const operations: { type: 'set' | 'delete'; id: string; data?: any }[] = [];
+    for (const item of itemsToWrite) {
+      operations.push({ type: 'set', id: item.id, data: sanitizeObject(item) });
+    }
+    for (const id of idsToDelete) {
+      operations.push({ type: 'delete', id });
+    }
+
+    const CHUNK_SIZE = 400;
+    for (let i = 0; i < operations.length; i += CHUNK_SIZE) {
+      const chunk = operations.slice(i, i + CHUNK_SIZE);
+      const batch = writeBatch(db);
+      for (const op of chunk) {
+        const ref = doc(db, collectionName, op.id);
+        if (op.type === 'set') {
+          batch.set(ref, op.data);
+        } else {
+          batch.delete(ref);
+        }
+      }
       await batch.commit();
     }
   } catch (error) {
@@ -243,7 +294,9 @@ export default function App() {
   const setCarregamentos = (action: React.SetStateAction<Carregamento[]>) => {
     _setCarregamentos(prev => {
       const next = typeof action === 'function' ? (action as Function)(prev) : action;
-      syncToFirestore('carregamentos', next, prev);
+      setTimeout(() => {
+        syncToFirestore('carregamentos', next, prev);
+      }, 0);
       return next;
     });
   };
@@ -251,7 +304,9 @@ export default function App() {
   const setShipments = (action: React.SetStateAction<Shipment[]>) => {
     _setShipments(prev => {
       const next = typeof action === 'function' ? (action as Function)(prev) : action;
-      syncToFirestore('shipments', next, prev);
+      setTimeout(() => {
+        syncToFirestore('shipments', next, prev);
+      }, 0);
       return next;
     });
   };
@@ -259,7 +314,9 @@ export default function App() {
   const setPallets = (action: React.SetStateAction<Pallet[]>) => {
     _setPallets(prev => {
       const next = typeof action === 'function' ? (action as Function)(prev) : action;
-      syncToFirestore('pallets', next, prev);
+      setTimeout(() => {
+        syncToFirestore('pallets', next, prev);
+      }, 0);
       return next;
     });
   };
@@ -267,7 +324,9 @@ export default function App() {
   const setUsersState = (action: React.SetStateAction<User[]>) => {
     _setUsers(prev => {
       const next = typeof action === 'function' ? (action as Function)(prev) : action;
-      syncToFirestore('users', next, prev);
+      setTimeout(() => {
+        syncToFirestore('users', next, prev);
+      }, 0);
       return next;
     });
   };
@@ -275,7 +334,9 @@ export default function App() {
   const setAuditLogsState = (action: React.SetStateAction<AuditLog[]>) => {
     _setAuditLogs(prev => {
       const next = typeof action === 'function' ? (action as Function)(prev) : action;
-      syncToFirestore('auditLogs', next, prev);
+      setTimeout(() => {
+        syncToFirestore('auditLogs', next, prev);
+      }, 0);
       return next;
     });
   };
