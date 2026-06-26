@@ -30,6 +30,8 @@ export interface Pallet {
   loaded: boolean;
   loadedAt?: string;
   loadedVehicleId?: string; // Vehicle it was actually loaded onto
+  volumeInicial?: number;
+  volumeFinal?: number;
 }
 
 export interface ScanResult {

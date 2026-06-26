@@ -11,31 +11,30 @@
 
 /* Print thermal label styles */
 @media print {
-  /* Hide all generic page content */
-  body * {
-    visibility: hidden;
-    background: none !important;
+  /* Completely hide all elements under body except our print-only sticker portal */
+  body > *:not(#print-only-sticker) {
+    display: none !important;
   }
-  
-  /* Show only our exact label card layout */
-  #printable-pallet-sticker, #printable-pallet-sticker * {
-    visibility: visible;
-  }
-  
-  /* Position target sticker exactly in the print margin */
-  #printable-pallet-sticker {
-    position: absolute;
-    left: 0;
-    top: 0;
+
+  /* Force display and position for the sticker */
+  #print-only-sticker {
+    display: flex !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
     width: 100mm !important;
     height: 80mm !important;
-    border: 2px solid #000000 !important;
-    padding: 12px !important;
     margin: 0 !important;
+    padding: 12px !important;
+    border: 2px solid #000000 !important;
     box-shadow: none !important;
     transform: none !important;
     background-color: #ffffff !important;
     color: #000000 !important;
+    box-sizing: border-box !important;
+    page-break-inside: avoid !important;
+    page-break-after: avoid !important;
+    page-break-before: avoid !important;
   }
 
   /* Force standard margins and dimensions */

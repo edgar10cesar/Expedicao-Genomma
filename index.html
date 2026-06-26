@@ -23,10 +23,21 @@
           navigator.serviceWorker.register('./sw.js')
             .then(reg => {
               console.log('PWA Service Worker registrado com sucesso:', reg.scope);
+              // Force-check for updates on load
+              reg.update();
             })
             .catch(err => {
               console.warn('Falha ao registrar Service Worker (esperado em ambientes locais sem HTTPS):', err);
             });
+        });
+
+        // Refresh the page automatically when a new service worker replaces the active one
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+          }
         });
       }
     </script>

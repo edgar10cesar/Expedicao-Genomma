@@ -48,6 +48,35 @@ export default function PalletAssemblySection({
   const [carrierName, setCarrierName] = useState('');
   const [volumes, setVolumes] = useState(1);
 
+  // Controle sequencial de volumes da carga em paletização
+  const [volInicial, setVolInicial] = useState<number>(1);
+  const [volFinal, setVolFinal] = useState<number>(100);
+
+  // Paletes já criados/fechados para a carga selecionada
+  const loadPallets = pallets.filter(p => p && p.carregamentoId === selectedLoadId);
+  const paletesConcluidos = loadPallets.length;
+
+  // Soma de volumes totais planejados dos embarques desta carga
+  const loadShipments = shipments.filter(sh => sh && sh.carregamentoId === selectedLoadId);
+  const sumShipments = loadShipments.reduce((sum, sh) => sum + (Number(sh.volumes) || 0), 0);
+  const totalCargaVolumes = sumShipments > 0 ? sumShipments : 1000;
+
+  // Último volume passado em paletes anteriores (como pallets tem inserção [newPallet, ...prev], o índice 0 é o mais recente)
+  const lastPalletCreated = loadPallets[0];
+  const volumesJaPassados = lastPalletCreated && lastPalletCreated.volumeFinal ? Number(lastPalletCreated.volumeFinal) : 0;
+  const saldoCarga = Math.max(0, totalCargaVolumes - volumesJaPassados);
+
+  useEffect(() => {
+    if (selectedLoadId) {
+      const pList = pallets.filter(p => p && p.carregamentoId === selectedLoadId);
+      const lastP = pList[0];
+      const passed = lastP && lastP.volumeFinal ? Number(lastP.volumeFinal) : 0;
+      const nextInit = passed + 1;
+      setVolInicial(nextInit);
+      setVolFinal(Math.max(nextInit, passed + 100));
+    }
+  }, [selectedLoadId, pallets]);
+
   // Feedback states
   const [inputFeedback, setInputFeedback] = useState<{
     type: 'success' | 'info' | 'error';
@@ -277,7 +306,9 @@ export default function PalletAssemblySection({
         carrierName: item.carrierName,
         volumes: item.volumes
       })),
-      loaded: false
+      loaded: false,
+      volumeInicial: Number(volInicial) || 1,
+      volumeFinal: Number(volFinal) || 100
     };
 
     // Update statuses of shipments involved in the database based on completeness
@@ -398,6 +429,69 @@ export default function PalletAssemblySection({
                     </option>
                   ))}
                 </select>
+              </div>
+
+              {/* CONTROLE OPERACIONAL DOS 4 CAMPOS DE VOLUME DA CARGA */}
+              <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-blue-950 text-white p-4.5 rounded-xl mb-6 shadow-md border border-slate-800">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 border-b border-slate-750 pb-2.5">
+                  <span className="text-xs font-bold uppercase tracking-wider font-mono text-blue-400 flex items-center gap-2">
+                    <Boxes className="w-4 h-4 text-blue-400" />
+                    Controle Sequencial de Volumes ({activeCarregamento?.name || 'Carga Selecionada'})
+                  </span>
+                  <span className="text-[10.5px] font-mono bg-blue-500/20 text-blue-200 px-2.5 py-0.5 rounded border border-blue-500/30 w-fit">
+                    Total Planejado: {totalCargaVolumes} Volumes
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {/* 1º Campo: Primeiro Volume (Editável) */}
+                  <div className="bg-slate-800/90 p-2.5 rounded-lg border border-slate-700 focus-within:border-blue-400 transition-colors">
+                    <label className="block text-[10px] font-mono uppercase text-slate-300 mb-1 font-semibold">
+                      1. Primeiro Volume *
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={volInicial}
+                      onChange={e => setVolInicial(Math.max(1, Number(e.target.value)))}
+                      className="w-full bg-slate-900 text-white border border-slate-600 rounded px-2 py-1 text-xs font-mono font-bold outline-none focus:ring-1 focus:ring-blue-400"
+                    />
+                  </div>
+
+                  {/* 2º Campo: Último Volume (Editável) */}
+                  <div className="bg-slate-800/90 p-2.5 rounded-lg border border-slate-700 focus-within:border-blue-400 transition-colors">
+                    <label className="block text-[10px] font-mono uppercase text-blue-300 mb-1 font-semibold">
+                      2. Último Volume *
+                    </label>
+                    <input
+                      type="number"
+                      min={volInicial}
+                      value={volFinal}
+                      onChange={e => setVolFinal(Math.max(volInicial, Number(e.target.value)))}
+                      className="w-full bg-slate-900 text-blue-300 border border-blue-500/60 rounded px-2 py-1 text-xs font-mono font-bold outline-none focus:ring-1 focus:ring-blue-400"
+                    />
+                  </div>
+
+                  {/* 3º Campo: Quantos Pallets já foram passados (Não Editável) */}
+                  <div className="bg-slate-800/50 p-2.5 rounded-lg border border-slate-750/80">
+                    <label className="block text-[10px] font-mono uppercase text-slate-400 mb-1 font-semibold" title="Soma automática de paletes gerados para esta carga">
+                      3. Paletes Passados
+                    </label>
+                    <div className="bg-slate-900/60 text-slate-300 border border-slate-700/50 rounded px-2 py-1 text-xs font-mono font-extrabold select-none truncate">
+                      {paletesConcluidos}
+                    </div>
+                  </div>
+
+                  {/* 4º Campo: Saldo da Carga (Não Editável) */}
+                  <div className="bg-slate-800/50 p-2.5 rounded-lg border border-slate-750/80">
+                    <label className="block text-[10px] font-mono uppercase text-emerald-400 mb-1 font-semibold" title="Saldo restante: Total da carga menos volumes passados">
+                      4. Saldo da Carga
+                    </label>
+                    <div className="bg-slate-900/60 text-emerald-400 border border-emerald-500/30 rounded px-2 py-1 text-xs font-mono font-black select-none truncate">
+                      {saldoCarga}
+                    </div>
+                  </div>
+                </div>
               </div>
 
             {/* Checkout / Three Fields Scan inputs */}

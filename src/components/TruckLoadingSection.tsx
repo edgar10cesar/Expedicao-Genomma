@@ -69,6 +69,86 @@ export default function TruckLoadingSection({
   const animationFrameRef = useRef<number | null>(null);
   const isScanningRef = useRef<boolean>(false);
 
+  // Robust AudioContext ref for reliable mobile audio playback
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  // Proactively initialize and resume/unlock AudioContext on first user interaction (safari/chrome mobile constraint)
+  useEffect(() => {
+    const initAudio = () => {
+      if (!audioCtxRef.current) {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          audioCtxRef.current = new AudioContextClass();
+        }
+      }
+      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume().catch(e => console.warn("Failed to resume audio context:", e));
+      }
+    };
+
+    window.addEventListener('click', initAudio, { passive: true });
+    window.addEventListener('touchstart', initAudio, { passive: true });
+    return () => {
+      window.removeEventListener('click', initAudio);
+      window.removeEventListener('touchstart', initAudio);
+    };
+  }, []);
+
+  // Professional acoustic feedback synthesizer (max volume & piercing clarity for loud environments)
+  const playSound = (type: 'success' | 'warn' | 'error') => {
+    try {
+      let ctx = audioCtxRef.current;
+      if (!ctx) {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          ctx = new AudioContextClass();
+          audioCtxRef.current = ctx;
+        }
+      }
+      if (!ctx) return;
+
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+
+      const playBeep = (freq: number, duration: number, oscType: OscillatorType = 'sine', volume = 1.0) => {
+        if (!ctx) return;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = oscType;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+
+        // Maximize volume gain at current time
+        gain.gain.setValueAtTime(volume, ctx.currentTime);
+        // Exponential decay so it fades cleanly without clicking
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+      };
+
+      if (type === 'success') {
+        // High-pitch dual-tone beep (extremely loud and clear for successful approvals)
+        playBeep(1100, 0.08, 'sine', 1.0);
+        setTimeout(() => {
+          playBeep(1450, 0.12, 'sine', 1.0);
+        }, 85);
+      } else {
+        // Low buzzing siren tone (makes a strong, distinct raw sound so the operator stops immediately)
+        playBeep(240, 0.15, 'sawtooth', 0.9);
+        setTimeout(() => {
+          playBeep(160, 0.28, 'sawtooth', 0.9);
+        }, 130);
+      }
+    } catch (err) {
+      console.warn("Failed to play scanner audio notification:", err);
+    }
+  };
+
   const cleanUpCamera = () => {
     isScanningRef.current = false;
     if (animationFrameRef.current) {
@@ -267,6 +347,7 @@ export default function TruckLoadingSection({
         });
         
         appendLog(palletId, 'error', 'Palete já estava carregado (Tentativa de bipa dupla)');
+        playSound('error');
         return;
       }
 
@@ -321,6 +402,7 @@ export default function TruckLoadingSection({
         });
 
         appendLog(palletId, 'warn', `Barrado por divergências: ${problems.join('; ')}`);
+        playSound('warn');
       } else {
         // Green Light: Fully correct loading according to plan!
         // A) Update Pallet internal state in app to 'loaded'
@@ -360,6 +442,7 @@ export default function TruckLoadingSection({
         });
 
         appendLog(palletId, 'success', `Carregamento autorizado no veículo. ${scannedShipments.length} embarques integrados.`);
+        playSound('success');
 
         // Check if this was the last pallet of the load to be loaded
         const vehiclePallets = pallets.filter(p => p && p.carregamentoId === activeVehicleId);
@@ -402,6 +485,7 @@ export default function TruckLoadingSection({
         description: 'Não foi possível interpretar os dados deste QR code. Certifique-se de escanear uma etiqueta de palete Genomma válida gerada na Sessão 2.'
       });
       setScannedQrString('');
+      playSound('error');
     }
   };
 
