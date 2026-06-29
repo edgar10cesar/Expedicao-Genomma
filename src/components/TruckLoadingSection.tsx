@@ -383,12 +383,13 @@ export default function TruckLoadingSection({
 
       // 3. Formulate scan result
       const isDivergent = problems.length > 0;
-      const incorrectCarrier = associatedLoadId !== activeVehicleId;
-      
-      if (incorrectCarrier && problems.length === 0) {
-        problems.push(
-          `O palete foi montado originalmente para o veículo ID ${associatedLoadId.substring(0, 8)}, mas está sendo carregado no veículo atual.`
-        );
+
+      // Detecta se o(s) embarque(s) deste palete foram transferidos para outra carga
+      // (o QR foi impresso originalmente para outra carga, mas a programação atual já reflete a mudança)
+      let transferNotice: string | null = null;
+      if (!isDivergent && associatedLoadId && associatedLoadId !== activeVehicleId) {
+        const originalLoad = carregamentos.find(v => v.id === associatedLoadId);
+        transferNotice = `Embarque transferido para a carga "${activeVehicle?.name || 'Desconhecido'}" (originalmente montado para "${originalLoad?.name || 'carga removida'}"). Carregamento liberado.`;
       }
 
       if (isDivergent) {
@@ -437,11 +438,19 @@ export default function TruckLoadingSection({
         setScanFeedback({
           status: 'success',
           title: 'Aprovado para Embarque!',
-          description: `O palete ${palletId} foi validado com sucesso contra a planilha planejada. ${scannedShipments.length} volumes colocados no caminhão.`,
+          description: transferNotice
+            ? `${transferNotice} ${scannedShipments.length} volumes colocados no caminhão.`
+            : `O palete ${palletId} foi validado com sucesso contra a planilha planejada. ${scannedShipments.length} volumes colocados no caminhão.`,
           palletId
         });
 
-        appendLog(palletId, 'success', `Carregamento autorizado no veículo. ${scannedShipments.length} embarques integrados.`);
+        appendLog(
+          palletId,
+          'success',
+          transferNotice
+            ? `${transferNotice} ${scannedShipments.length} embarques integrados.`
+            : `Carregamento autorizado no veículo. ${scannedShipments.length} embarques integrados.`
+        );
         playSound('success');
 
         // Check if this was the last pallet of the load to be loaded
