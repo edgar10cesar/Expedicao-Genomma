@@ -349,6 +349,14 @@ Express São Miguel\t30890125\tFarmácia Pague Menos - CD Campinas\tPD-9905\tSP\
     setShipments(prev => prev.filter(s => s.id !== shipId));
   };
 
+  // Mover um embarque já programado para outra carga (mesmo que já tenha sido paletizado)
+  const handleMoveShipment = (shipId: string, newLoadId: string) => {
+    if (!newLoadId) return;
+    setShipments(prev =>
+      prev.map(sh => (sh.id === shipId ? { ...sh, carregamentoId: newLoadId } : sh))
+    );
+  };
+
   // Reopen loads for either pallet assembly or truck loading
   const handleReopenAssembly = (loadId: string) => {
     if (!loadId) return;
@@ -1123,6 +1131,7 @@ Express São Miguel\t30890125\tFarmácia Pague Menos - CD Campinas\tPD-9905\tSP\
                       <th className="py-2.5 px-4">Transportadora</th>
                       <th className="py-2.5 px-4 text-center">Volumes</th>
                       <th className="py-2.5 px-4 text-center">Status</th>
+                      <th className="py-2.5 px-4 text-center w-32">Mover de Carga</th>
                       <th className="py-2.5 px-4 text-center w-12">Remover</th>
                     </tr>
                   </thead>
@@ -1151,6 +1160,25 @@ Express São Miguel\t30890125\tFarmácia Pague Menos - CD Campinas\tPD-9905\tSP\
                           }`}>
                             {s.status === 'Carregado' ? 'Carregado' : s.status === 'Montado' ? 'No Palete' : 'Pendente'}
                           </span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <select
+                            value=""
+                            onChange={e => {
+                              if (e.target.value) handleMoveShipment(s.id, e.target.value);
+                            }}
+                            className="text-[10px] font-medium border border-slate-200 rounded-md px-1.5 py-1 outline-none bg-slate-50 text-slate-600 focus:ring-1 focus:ring-blue-500"
+                            title="Transferir este embarque para outra carga, mesmo já paletizado"
+                          >
+                            <option value="">Mover para...</option>
+                            {carregamentos
+                              .filter(c => c.id !== s.carregamentoId)
+                              .map(c => (
+                                <option key={c.id} value={c.id}>
+                                  {c.name}
+                                </option>
+                              ))}
+                          </select>
                         </td>
                         <td className="py-3 px-4 text-center">
                           <button
